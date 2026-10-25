@@ -1,13 +1,14 @@
 {
   "name": "ai-virtual-interview-simulator",
+  "private": true,
   "version": "1.0.0",
-  "description": "AI-powered virtual interview simulator for recruiters",
-  "main": "server.js",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.19.2"
+    "dev:frontend": "npm --prefix frontend run dev -- --host 0.0.0.0 --port 5173",
+    "dev:backend": "cd backend && python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "build:frontend": "npm --prefix frontend run build",
+    "test:backend": "cd backend && python -m pytest tests -q"
   }
 }
