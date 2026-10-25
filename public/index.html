@@ -1,0 +1,122 @@
+const questionList = document.getElementById('questionList');
+const reportSection = document.getElementById('reportSection');
+const submitButton = document.getElementById('submitInterview');
+const resetButton = document.getElementById('resetInterview');
+
+async function loadQuestions() {
+  try {
+    const response = await fetch('/api/questions');
+    const payload = await response.json();
+
+    questionList.innerHTML = payload.questions
+      .map(
+        (question) => `
+          <article class="question-card">
+            <div class="question-header">
+              <div>
+                <div class="section-label">${question.category}</div>
+                <h3>${question.question}</h3>
+              </div>
+              <span class="question-tag">${question.focus}</span>
+            </div>
+            <textarea class="answer-box" data-question-id="${question.id}" placeholder="Share a concise example with measurable outcomes and clear reasoning..."></textarea>
+          </article>
+        `
+      )
+      .join('');
+  } catch (error) {
+    questionList.innerHTML = '<p>Unable to load questions. Please refresh the page.</p>';
+    console.error(error);
+  }
+}
+
+function renderReport(data) {
+  const strengths = data.strengths.length ? data.strengths : ['No standout strengths identified'];
+  const opportunities = data.opportunities.length ? data.opportunities : ['No immediate gaps identified'];
+
+  reportSection.innerHTML = `
+    <div class="score-ring"><span>${data.averageScore}</span></div>
+    <div class="result-box">
+      <h4>AI Recommendation</h4>
+      <p>${data.recommendation}</p>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <strong>${data.averageScore}</strong>
+        <span>Average score</span>
+      </div>
+      <div class="summary-card">
+        <strong>${strengths.length}</strong>
+        <span>Strong areas</span>
+      </div>
+    </div>
+
+    <div class="result-box" style="margin-top: 18px;">
+      <h4>Strengths</h4>
+      <ul class="list">
+        ${strengths.map((item) => `<li>${item}</li>`).join('')}
+      </ul>
+    </div>
+
+    <div class="result-box" style="margin-top: 18px;">
+      <h4>Follow-up focus</h4>
+      <ul class="list">
+        ${opportunities.map((item) => `<li>${item}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+submitButton.addEventListener('click', async () => {
+  const answers = Array.from(document.querySelectorAll('.answer-box')).map((field) => ({
+    id: Number(field.dataset.questionId),
+    answer: field.value.trim()
+  }));
+
+  const notAnswered = answers.filter((item) => !item.answer).length;
+  if (notAnswered > 0) {
+    alert('Please answer all interview questions before submitting.');
+    return;
+  }
+
+  submitButton.disabled = true;
+  submitButton.textContent = 'Evaluating...';
+
+  try {
+    const response = await fetch('/api/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers })
+    });
+
+    const payload = await response.json();
+    renderReport(payload);
+  } catch (error) {
+    console.error(error);
+    alert('There was a problem generating the evaluation. Please try again.');
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = 'Submit Interview';
+  }
+});
+
+resetButton.addEventListener('click', () => {
+  document.querySelectorAll('.answer-box').forEach((field) => {
+    field.value = '';
+  });
+  reportSection.innerHTML = `
+    <div class="result-box">
+      <h4>Evaluation panel</h4>
+      <p>Complete the candidate responses to generate a recruiter-ready evaluation.</p>
+    </div>
+  `;
+});
+
+loadQuestions();
+reportSection.innerHTML = `
+  <div class="result-box">
+    <h4>Evaluation panel</h4>
+    <p>Complete the candidate responses to generate a recruiter-ready evaluation.</p>
+  </div>
+`;
